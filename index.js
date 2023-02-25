@@ -3,7 +3,7 @@ const app = express();
 const http = require("http");
 const cors = require("cors");
 const { exec } = require("child_process");
-
+const os = require("node:os");
 app.use(cors());
 
 const server = http.createServer(app);
@@ -66,8 +66,8 @@ app.get("/extensions", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  exec("ls", async (error, stdout, stderr) => {
-    res.send(stdout);
+  exec("ls -la", async (error, stdout, stderr) => {
+    res.send(os.homedir());
   });
 });
 server.listen(process.env.PORT || 3001, () => {
