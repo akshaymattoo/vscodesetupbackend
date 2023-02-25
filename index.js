@@ -66,7 +66,9 @@ app.get("/extensions", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello server");
+  exec("ls", async (error, stdout, stderr) => {
+    res.send(stdout);
+  });
 });
 server.listen(process.env.PORT || 3001, () => {
   console.log("SERVER IS RUNNING on ", process.env.PORT);
