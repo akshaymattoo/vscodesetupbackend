@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const CMD = "code --list-extensions --show-versions";
 const MARKETPLACE_EXTN_URL =
   "https://marketplace.visualstudio.com/items?itemName=";
-app.get("/", (req, res) => {
+app.get("/extensions", (req, res) => {
   exec(CMD, async (error, stdout, stderr) => {
     if (error) {
       console.error(`error: ${error.message}`);
@@ -63,6 +63,10 @@ app.get("/", (req, res) => {
     });
     res.status(200).json({ installedExtensions: res1 });
   });
+});
+
+app.get("/", (req, res) => {
+  res.send("Hello server");
 });
 server.listen(3001, () => {
   console.log("SERVER IS RUNNING on 3001");
