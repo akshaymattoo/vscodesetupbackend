@@ -66,8 +66,8 @@ app.get("/extensions", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  exec("ls -la", async (error, stdout, stderr) => {
-    res.send(os.homedir());
+  exec("whoami", async (error, stdout, stderr) => {
+    res.send(stdout);
   });
 });
 server.listen(process.env.PORT || 3001, () => {
