@@ -71,7 +71,7 @@ app.get("/", (req, res) => {
   });
 });
 server.listen(process.env.PORT || 3001, () => {
-  console.log("SERVER IS RUNNING on ", process.env.PORT);
+  console.log("SERVER IS RUNNING on ", process.env.PORT || 3001);
 });
 
 function extractStatistic(extn, name) {
