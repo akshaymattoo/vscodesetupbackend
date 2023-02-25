@@ -68,7 +68,7 @@ app.get("/extensions", (req, res) => {
 app.get("/", (req, res) => {
   res.send("Hello server");
 });
-server.listen(3001, () => {
+server.listen(process.env.PORT || 3001, () => {
   console.log("SERVER IS RUNNING on 3001");
 });
 
