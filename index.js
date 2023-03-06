@@ -82,7 +82,7 @@ const healthLimiter = rateLimit({
     });
   },
 });
-app.get("/healthLimiter", healthLimiter, function (req, res) {
+app.get("/", healthLimiter, function (req, res) {
   return res.send("Health check");
 });
 

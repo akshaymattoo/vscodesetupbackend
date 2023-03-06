@@ -1,7 +1,9 @@
 const CMD = "code --list-extensions --show-versions";
 const MARKETPLACE_EXTN_URL =
   "https://marketplace.visualstudio.com/items?itemName=";
-const postURl = "http://localhost:3001/extensions";
+import dotenv from "dotenv";
+dotenv.config();
+const postURl = process.env.POST_URL;
 import { exec } from "child_process";
 import pkg from "node-machine-id";
 const { machineId } = pkg;
@@ -125,5 +127,5 @@ async function getExtensionDetails(fullExtensionName) {
 
 async function getMachineId() {
   let id = await machineId();
-  return id;
+  return id + "lkl";
 }
