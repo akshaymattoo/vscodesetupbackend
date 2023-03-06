@@ -13,7 +13,7 @@ const server = http.createServer(app);
 import rateLimit from "express-rate-limit";
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 12, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  max: 3, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: function (req, res /*next*/) {
@@ -71,8 +71,19 @@ app.post("/extensions", limiter, async (req, res) => {
   }
 });
 
-app.get("/", function (req, res) {
-  return res.send("Hello World");
+const healthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: function (req, res /*next*/) {
+    return res.status(429).json({
+      error: "You sent too many requests. Please wait a while then try again",
+    });
+  },
+});
+app.get("/healthLimiter", healthLimiter, function (req, res) {
+  return res.send("Health check");
 });
 
 server.listen(process.env.PORT || 3001, () => {
