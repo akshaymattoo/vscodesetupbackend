@@ -1,118 +1,80 @@
-const express = require("express");
+import express from "express";
 const app = express();
-const http = require("http");
-const cors = require("cors");
-const { exec } = require("child_process");
-const os = require("node:os");
+import http from "http";
+import cors from "cors";
+import { service as UserExtensionDataService } from "./firebaseService.js";
+
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded());
 
 const server = http.createServer(app);
-const CMD = "code --list-extensions --show-versions";
-const MARKETPLACE_EXTN_URL =
-  "https://marketplace.visualstudio.com/items?itemName=";
-app.get("/extensions", (req, res) => {
-  exec(CMD, async (error, stdout, stderr) => {
-    if (error) {
-      console.error(`error: ${error.message}`);
-      return;
-    }
 
-    if (stderr) {
-      console.error(`stderr: ${stderr}`);
-      return;
-    }
-
-    const resp = stdout.split("\n");
-    resp.pop();
-    let result = await Promise.all(
-      resp.map(async (name) => {
-        const detailedResp = await getExtensionDetails(name);
-        return detailedResp.results[0].extensions[0];
-      })
-    );
-    const res1 = result.map((extn) => {
-      //console.log(extn);
-      const finalResult = {};
-      finalResult["publisherId"] = extn?.publisher?.publisherId;
-      finalResult["publisherName"] = extn?.publisher?.publisherName;
-      finalResult["publisherDomain"] = extn?.publisher?.domain;
-      finalResult["publisherId"] = extn?.publisher?.publisherId;
-      finalResult["extensionId"] = extn?.extensionId;
-      finalResult["extensionName"] = extn?.extensionName;
-      finalResult["displayName"] = extn?.displayName;
-      finalResult["categories"] = extn?.categories;
-      finalResult["shortDescription"] = extn?.shortDescription;
-      finalResult["icon"] = extn?.versions[0]?.files
-        .map((file) => {
-          const att = file?.assetType;
-          if (att.indexOf("Icons.Small") >= 0) {
-            return file.source;
-          }
-        })
-        .filter((n) => n)[0];
-      finalResult["hrefLink"] =
-        MARKETPLACE_EXTN_URL +
-        "" +
-        extn?.publisher?.publisherName +
-        "." +
-        extn?.extensionName;
-      finalResult["installCount"] = extractStatistic(extn, "install");
-      finalResult["downloadCount"] = extractStatistic(extn, "downloadCount");
-      finalResult["averageRating"] = extractStatistic(extn, "averagerating");
-      return finalResult;
+import rateLimit from "express-rate-limit";
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 12, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: function (req, res /*next*/) {
+    return res.status(429).json({
+      error: "You sent too many requests. Please wait a while then try again",
     });
-    res.status(200).json({ installedExtensions: res1 });
-  });
+  },
 });
 
-app.get("/", (req, res) => {
-  exec("whoami", async (error, stdout, stderr) => {
-    res.send(stdout);
-  });
+app.post("/extensions", limiter, async (req, res) => {
+  try {
+    const { name, extensions, id } = req.body;
+    console.log(`Request from id [${id}]`);
+    if (!name || !extensions || !id) {
+      return res.status(400).send({ message: "Incomplete request" });
+    }
+    if (id.length < 50) {
+      console.log(`Not proper id passed`);
+      return res.status(400).send({ message: "Incomplete request" });
+    }
+    if (typeof extensions !== "object") {
+      console.log(`Not proper extensions passed`);
+      return res.status(400).send({ message: "Incomplete request" });
+    }
+    if (extensions && extensions.length === 0) {
+      return res.status(400).send({
+        message: "Incomplete request. Please provide proper extensions",
+      });
+    }
+    const userDoc = {
+      id: id,
+      name: name,
+      avatar: `https://api.dicebear.com/5.x/fun-emoji/svg?scale=50&seed=${
+        name.split(" ")[0]
+      }`,
+      extensions: extensions,
+    };
+
+    // first try to get the user
+    const user = await UserExtensionDataService.getUser(id);
+    if (!user) {
+      // if user is not present then add the user
+      await UserExtensionDataService.addUser(userDoc);
+      console.log(`Sucessfully added doc`);
+    } else {
+      await UserExtensionDataService.updateUserExtensions(id, extensions);
+      console.log(`Sucessfully updated doc`);
+    }
+    res.status(200).send({
+      message:
+        "Sucessfully uploaded the data. Please visit vscodesetup.com/extensions to see what others have posted.",
+    });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
 });
+
+app.get("/", function (req, res) {
+  return res.send("Hello World");
+});
+
 server.listen(process.env.PORT || 3001, () => {
   console.log("SERVER IS RUNNING on ", process.env.PORT || 3001);
 });
-
-function extractStatistic(extn, name) {
-  const stat = extn?.statistics.find((s) => s.statisticName === name);
-  if (!stat) {
-    return 0;
-  }
-  return stat.value;
-}
-async function getExtensionDetails(fullExtensionName) {
-  const [extensionName, _] = fullExtensionName.split("@");
-  const MARKETPLACE_BASE_URL = "https://marketplace.visualstudio.com";
-  const MARKETPLACE_EXTENSION_ENDPOINT = "/_apis/public/gallery/extensionquery";
-  const url = `${MARKETPLACE_BASE_URL}${MARKETPLACE_EXTENSION_ENDPOINT}`;
-  const resp = await fetch(`${url}?api-version=3.0-preview.1`, {
-    // Adding method type
-    method: "POST",
-    // Adding body or contents to send
-    body: JSON.stringify({
-      assetTypes: null,
-      filters: [
-        {
-          criteria: [{ filterType: 7, value: extensionName }],
-          direction: 2,
-          pageSize: 100,
-          pageNumber: 1,
-          sortBy: 0,
-          sortOrder: 0,
-          pagingToken: null,
-        },
-      ],
-      flags: 914,
-    }),
-
-    // Adding headers to the request
-    headers: {
-      "Content-type": "application/json; charset=UTF-8",
-    },
-  });
-  // Converting to JSON
-  const data = await resp.json();
-  //console.log(data);
-  return data;
-}
