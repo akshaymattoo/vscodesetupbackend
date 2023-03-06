@@ -127,5 +127,5 @@ async function getExtensionDetails(fullExtensionName) {
 
 async function getMachineId() {
   let id = await machineId();
-  return id + "lkl";
+  return id;
 }
