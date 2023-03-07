@@ -3,7 +3,7 @@ const MARKETPLACE_EXTN_URL =
   "https://marketplace.visualstudio.com/items?itemName=";
 import dotenv from "dotenv";
 dotenv.config();
-const postURl = process.env.POST_URL;
+const postURl = "https://vscodesetupbackend.onrender.com/extensions";
 import { exec } from "child_process";
 import pkg from "node-machine-id";
 const { machineId } = pkg;
